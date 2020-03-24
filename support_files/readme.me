@@ -2,10 +2,10 @@
 These files are used as abstraction layers for porting the framework for different targets (RTOS and HW). The framework is organized 
 as it follows:
   - performance_lib_hw_porting_layer: hardware abstraction layer
-  - performance_lib_libc: standard libC functions
+  - performance_lib_libc: standard libC functions - these can be enable using pre-compiler macro LIBC=1
   - performance_lib_os_porting_layer: operating system abstraction layer
   - performance_lib_static: framework timing control structures
-  - performance_lib_stdio: functions to control stdio (print)
+  - performance_lib_stdio: functions to control stdio (print) - these can be enable using pre-compiler macro PERFORMANCE_PRINT
 
 Also, two library files are included: performance_lib and performance_lib_mapping. These files are used for types definitions and 
 overal system definitions.
