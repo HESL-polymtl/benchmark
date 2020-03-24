@@ -101,7 +101,7 @@ uint64_t PerfGetTimeTicks(void)
   tick = RTI_UP_CNT ;
   tick |= (uint64_t) ((uint64_t) RTI_CNT_FRCx<<32u);
 
-#elif defined(_MPC5777C) || defined(_MPC8544)
+#elif defined(_MPC5777C)
   tick = PerfInlineGetTicks();
 #endif
 
