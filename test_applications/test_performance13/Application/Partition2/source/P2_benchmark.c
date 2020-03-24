@@ -12,10 +12,10 @@
 /* __________________________________________________________________________
 * MODULE DESCRIPTION:
 * -------------------
-* Filename : P1_benchmark.c
+* Filename : P2_benchmark.c
 * Original Author : Felipe Gohring de Magalhaes
 *
-* This module contains partition 1 main function.
+* This module contains partition 2 main function.
 *
 * ASSUMPTIONS, CONSTRAINTS OR LIMITATIONS:
 * ----------------------------------------
@@ -29,12 +29,6 @@
 /* INCLUDE SECTION */
 
 #include "P2.h"
-#include "MTypes.h"
-
-#include "MTesting.h"
-#include "ARINC653.h"
-#include "string.h"
-
 
 void dummy(void);
 /* __________________________________________________________________________
