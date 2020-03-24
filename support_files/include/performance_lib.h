@@ -54,7 +54,7 @@
 
 uint64_t PerfGetTimeTicks(void);                   //function to read system timer
 #define GET_CURRENT_TICKS() PerfGetTimeTicks()     //mapping for the function
-#define MAIN_FUNCTION() main_process(void)
+#define MAIN_FUNCTION() main()
 
 /*UTILS*/
 int32_t rand(void);
