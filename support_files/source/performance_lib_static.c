@@ -89,7 +89,7 @@ int32_t perf_init(char_t name[])
   int32_t pos;
   for (pos = 0; pos <= perf_current_pos(); pos++)
   {
-    if (check_in(pos, name) == 1)
+    if (check_in((int8_t)pos, name) == 1)
     {
       return pos;
     }
@@ -100,13 +100,18 @@ int32_t perf_init(char_t name[])
   {
     pos++;
     strcpy(EXECUTION_TIMES[pos].name, name);
-    EXECUTION_TIMES[pos].exec_time = 0;
     EXECUTION_TIMES[pos].currentTime = 0;
     EXECUTION_TIMES[pos].deltaTime = 0;
     EXECUTION_TIMES[pos].sPrevTime = 0;
-    EXECUTION_TIMES[pos].first_run = TRUE;
     EXECUTION_TIMES[pos].worstUS = 0.0;
-    EXECUTION_TIMES[pos].bestUS = 3.402823466e37;
+    EXECUTION_TIMES[pos].worst = 0;
+    EXECUTION_TIMES[pos].best = 0xFFFFFFFFFFFFFFFF;
+
+    EXECUTION_TIMES[pos].average = 0;
+    EXECUTION_TIMES[pos].averageNS = 0;
+    EXECUTION_TIMES[pos].sumTicks = 0;
+    EXECUTION_TIMES[pos].sumNSSQ = 0;
+    EXECUTION_TIMES[pos].noSamples = 0;
     perf_pos = pos;
     return (pos);
   }
@@ -160,59 +165,45 @@ void perf_end_measurements(int32_t pos)
  */
 void perf_validate_measurements(int32_t pos, uint8_t calc_deviation)
 {
-  float32_t dev = 0.0;
-  float32_t work = 0.0;
-  float32_t timeUS = 0.0;
-  float32_t currentExecutionTime = 0.0;
+  float32_t variance = 0;
 
-  if (EXECUTION_TIMES[pos].currentTime != EXECUTION_TIMES[pos].sPrevTime)
-  {
-    EXECUTION_TIMES[pos].deltaTime = (uint32_t) (EXECUTION_TIMES[pos].currentTime - EXECUTION_TIMES[pos].sPrevTime);
-    EXECUTION_TIMES[pos].sPrevTime = EXECUTION_TIMES[pos].currentTime;
-    EXECUTION_TIMES[pos].exec_time = EXECUTION_TIMES[pos].deltaTime;
-    if (EXECUTION_TIMES[pos].first_run == TRUE)
+  EXECUTION_TIMES[pos].noSamples++;
+  EXECUTION_TIMES[pos].deltaTime = (EXECUTION_TIMES[pos].currentTime - EXECUTION_TIMES[pos].sPrevTime);
+
+  EXECUTION_TIMES[pos].timeNS = (float32_t)perf_tick_to_ns(EXECUTION_TIMES[pos].deltaTime);
+  EXECUTION_TIMES[pos].timeUS = (float32_t)(EXECUTION_TIMES[pos].timeNS / 1000.0);
+  EXECUTION_TIMES[pos].timeMS = (float32_t)(EXECUTION_TIMES[pos].timeNS / 1000000.0);
+
+  EXECUTION_TIMES[pos].average = ((EXECUTION_TIMES[pos].noSamples - 1) * EXECUTION_TIMES[pos].average + EXECUTION_TIMES[pos].deltaTime) / EXECUTION_TIMES[pos].noSamples;
+  EXECUTION_TIMES[pos].averageNS = (float32_t)((float32_t)((float32_t)(EXECUTION_TIMES[pos].noSamples - 1) * (float32_t)EXECUTION_TIMES[pos].averageNS + (float32_t)EXECUTION_TIMES[pos].timeNS) / (float32_t)EXECUTION_TIMES[pos].noSamples);
+  EXECUTION_TIMES[pos].averageUS = (float32_t)(EXECUTION_TIMES[pos].averageNS / 1000.0);
+
+  if (EXECUTION_TIMES[pos].deltaTime < EXECUTION_TIMES[pos].best)
     {
-      EXECUTION_TIMES[pos].average = EXECUTION_TIMES[pos].deltaTime;
-      EXECUTION_TIMES[pos].first_run = FALSE;
-    }
-
-    else
-    {
-      //EXECUTION_TIMES[pos].exec_time = (EXECUTION_TIMES[pos].deltaTime + EXECUTION_TIMES[pos].exec_time) / 2;
-      EXECUTION_TIMES[pos].average = (EXECUTION_TIMES[pos].average+EXECUTION_TIMES[pos].deltaTime)/2;
-    }
-  }
-  
-  currentExecutionTime = (float32_t) perf_tick_to_ns((uint64_t)EXECUTION_TIMES[pos].exec_time);
-  if (calc_deviation == 1)
-  {
-    timeUS = currentExecutionTime / 1000.0;
-    work = (timeUS + EXECUTION_TIMES[pos].timeUS)/2;
-    work = (((timeUS-work)*(timeUS-work)) + ((EXECUTION_TIMES[pos].timeUS-work)*(EXECUTION_TIMES[pos].timeUS-work))) / 2;
-    dev = sqrt(work);
-    EXECUTION_TIMES[pos].deviation = dev;
-  }
-
-  else
-  {
-    (void) dev;
-    (void) timeUS;
-  }
-
-  work = (float32_t) perf_tick_to_ns((uint64_t)EXECUTION_TIMES[pos].average);
-  EXECUTION_TIMES[pos].averageUS = work / 1000.0;
-  EXECUTION_TIMES[pos].timeNS = currentExecutionTime;
-  EXECUTION_TIMES[pos].timeUS = EXECUTION_TIMES[pos].timeNS / 1000.0;
-  EXECUTION_TIMES[pos].timeMS = EXECUTION_TIMES[pos].timeNS / 1000000.0;
-  if (EXECUTION_TIMES[pos].timeUS < EXECUTION_TIMES[pos].bestUS)
-  {
+    EXECUTION_TIMES[pos].best = EXECUTION_TIMES[pos].deltaTime;
     EXECUTION_TIMES[pos].bestUS = EXECUTION_TIMES[pos].timeUS;
-  }
+    }
 
-  if (EXECUTION_TIMES[pos].timeUS > EXECUTION_TIMES[pos].worstUS)
-  {
+  if (EXECUTION_TIMES[pos].deltaTime > EXECUTION_TIMES[pos].worst)
+    {
+    EXECUTION_TIMES[pos].worst = EXECUTION_TIMES[pos].deltaTime;
     EXECUTION_TIMES[pos].worstUS = EXECUTION_TIMES[pos].timeUS;
-  }
+    }
+
+  if (calc_deviation == 1)
+    {
+      EXECUTION_TIMES[pos].sumNSSQ += EXECUTION_TIMES[pos].timeNS * EXECUTION_TIMES[pos].timeNS;
+      variance = (float32_t)((float32_t)((float32_t)EXECUTION_TIMES[pos].sumNSSQ / (float32_t)EXECUTION_TIMES[pos].noSamples) - (float32_t)(EXECUTION_TIMES[pos].averageNS * EXECUTION_TIMES[pos].averageNS));
+      if (variance < 0)
+        {
+          /* Rough estimation of standard deviation*/
+          EXECUTION_TIMES[pos].deviation = (float32_t)((EXECUTION_TIMES[pos].worstUS - EXECUTION_TIMES[pos].bestUS) / 4.0);
+        }
+      else
+        {
+          EXECUTION_TIMES[pos].deviation = (float32_t)(sqrt(variance) / 1000.0);
+        }
+    }
 }
 
 /* __________________________________________________________________________
@@ -254,8 +245,23 @@ void print_perf()
     PERF_PRINT_STRING(current.name);
     PERF_PRINT_STRING("*!*");
     PERF_PRINT_EOL();
+    PERF_PRINT_STRING("Last Execution Time (tick): ");
+    PERF_PRINT_UNSIGNED64(current.deltaTime);
+    PERF_PRINT_EOL();
+    PERF_PRINT_STRING("BCET (tick): ");
+    PERF_PRINT_UNSIGNED64(current.best);
+    PERF_PRINT_EOL();
+    PERF_PRINT_STRING("WCET (tick): ");
+    PERF_PRINT_UNSIGNED64(current.worst);
+    PERF_PRINT_EOL();
+    PERF_PRINT_STRING("Average (tick): ");
+    PERF_PRINT_UNSIGNED64(current.average);
+    PERF_PRINT_EOL();
     PERF_PRINT_STRING("Last Execution Time (us): ");
     PERF_PRINT_FLOAT(current.timeUS);
+    PERF_PRINT_EOL();
+    PERF_PRINT_STRING("BCET (us): ");
+    PERF_PRINT_FLOAT(current.bestUS);
     PERF_PRINT_EOL();
     PERF_PRINT_STRING("Average (us): ");
     PERF_PRINT_FLOAT(current.averageUS);
@@ -263,11 +269,11 @@ void print_perf()
     PERF_PRINT_STRING("WCET (us): ");
     PERF_PRINT_FLOAT(current.worstUS);
     PERF_PRINT_EOL();
-    PERF_PRINT_STRING("BCET (us): ");
-    PERF_PRINT_FLOAT(current.bestUS);
-    PERF_PRINT_EOL();
     PERF_PRINT_STRING("Standard Deviation (us): ");
     PERF_PRINT_FLOAT(current.deviation);
+    PERF_PRINT_EOL();
+    PERF_PRINT_STRING("Number of samples: ");
+    PERF_PRINT_UNSIGNED(current.noSamples);
     PERF_PRINT_EOL();
     PERF_PRINT_EOL();
   }

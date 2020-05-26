@@ -106,19 +106,23 @@ typedef PERF_NAME_TYPE MUTEX_NAME_TYPE;
 
 typedef struct{
     char_t name[18];
-    uint32_t exec_time;
     uint64_t currentTime;
-    uint32_t deltaTime;
+    uint64_t deltaTime;
     uint64_t sPrevTime;
+    uint64_t best;
+    uint64_t worst;
     uint64_t average;
-    uint8_t first_run;
     float32_t deviation;
+    float32_t averageNS;
     float32_t averageUS;
     float32_t worstUS;
     float32_t bestUS;
     float32_t timeNS;
     float32_t timeUS;
     float32_t timeMS;
+    uint64_t  sumTicks;
+    float32_t sumNSSQ;
+    uint32_t  noSamples;
 }perf_struct;
 
 /*TIME*/

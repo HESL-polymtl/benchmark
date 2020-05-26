@@ -38,8 +38,10 @@
 void partition_switch_test(void);
 void partition_switch_loop(void);
 
-uint64_t time1 = 0, time2 = 0, diff = 0, wcet = 0, bcet = INFINITE_TIME_VALUE, average = 0;
+uint64_t time1 = 0, time2 = 0, diff = 0, wcet = 0, bcet = (uint64_t)INFINITE_TIME_VALUE, average = 0;
+float32_t deviation = 0.0, averageNS = 0.0, diffNS = 0.0, variance = 0.0, sumTimeNSSQ = 0.0;
 uint64_t WINDOW_TIME_TICKS = 0;
+uint32_t noSamples = 0;
 /* __________________________________________________________________________
 *
 * FUNCTION NAME : main_process
@@ -119,32 +121,66 @@ void  MAIN_FUNCTION()
 }
 
 void partition_switch_loop(void){
-    while(1){
-        time1 = GET_CURRENT_TICKS();
-        if ((time2+WINDOW_TIME_TICKS) < time1){
-            diff = time1 - time2 - WINDOW_TIME_TICKS;
-            average = (average == 0) ? diff : __div64((average + diff),2);
-            wcet = (diff > wcet) ? diff : wcet;
-            bcet = (diff < bcet) ? diff : bcet;
+    while(1)
+    {
+      time1 = GET_CURRENT_TICKS();
+      if((time2 + WINDOW_TIME_TICKS) < time1)
+        {
+          noSamples++;
+          diff = time1 - time2 - WINDOW_TIME_TICKS;
+          diffNS = (float32_t)perf_tick_to_ns(diff);
+          average = ((noSamples - 1) * average + diff) / noSamples;
+          averageNS = ((float32_t)(noSamples - 1) * averageNS + diffNS) / (float32_t)noSamples;
+          wcet = (diff > wcet) ? diff : wcet;
+          bcet = (diff < bcet) ? diff : bcet;
+
+          sumTimeNSSQ += diffNS * diffNS;
+          variance = (sumTimeNSSQ / (float32_t)noSamples) - (averageNS * averageNS);
+          if (variance < 0)
+            {
+              deviation = (float32_t)((float32_t)(perf_tick_to_us(wcet) - perf_tick_to_us(bcet)) / 4.0);
+            }
+          else
+            {
+              deviation = (float32_t)(sqrt(variance)/ 1000.0);
+            }
         }
-        time2 = time1;
+      time2 = time1;
     }
 }
 
 void partition_switch_test(void)
 {
-  PERF_PRINT_STRING("--PARTITION SWITCH--");
-  PERF_PRINT_EOL();
-  PERF_PRINT_STRING("Average (us): ");
-  PERF_PRINT_UNSIGNED(perf_tick_to_us(average));
-  PERF_PRINT_EOL();
-  PERF_PRINT_STRING("WCET (us): ");
-  PERF_PRINT_UNSIGNED(perf_tick_to_us(wcet));
-  PERF_PRINT_EOL();
-  PERF_PRINT_STRING("BCET (us): ");
-  PERF_PRINT_UNSIGNED(perf_tick_to_us(bcet));
-  PERF_PRINT_EOL();
-  while(1);
+    PERF_PRINT_STRING("--PARTITION SWITCH--");
+    PERF_PRINT_EOL();
+    PERF_PRINT_STRING("BCET (tick): ");
+    PERF_PRINT_UNSIGNED64(bcet);
+    PERF_PRINT_EOL();
+    PERF_PRINT_STRING("WCET (tick): ");
+    PERF_PRINT_UNSIGNED64(wcet);
+    PERF_PRINT_EOL();
+    PERF_PRINT_STRING("Average (tick): ");
+    PERF_PRINT_UNSIGNED64(average);
+    PERF_PRINT_EOL();
+    PERF_PRINT_STRING("Last Execution Time (us): ");
+    PERF_PRINT_FLOAT(diffNS / 1000.0);
+    PERF_PRINT_EOL();
+    PERF_PRINT_STRING("Average (us): ");
+    PERF_PRINT_FLOAT(averageNS / 1000.0);
+    PERF_PRINT_EOL();
+    PERF_PRINT_STRING("WCET (us): ");
+    PERF_PRINT_FLOAT((float32_t)perf_tick_to_ns(wcet) / 1000.0);
+    PERF_PRINT_EOL();
+    PERF_PRINT_STRING("BCET (us): ");
+    PERF_PRINT_FLOAT((float32_t)perf_tick_to_ns(bcet) / 1000.0);
+    PERF_PRINT_EOL();
+    PERF_PRINT_STRING("Standard Deviation (us): ");
+    PERF_PRINT_FLOAT(deviation);
+    PERF_PRINT_EOL();
+    PERF_PRINT_STRING("Number of samples: ");
+    PERF_PRINT_UNSIGNED(noSamples);
+    PERF_PRINT_EOL();
+    while(1);
 }
 
 /* __________________________________________________________________________

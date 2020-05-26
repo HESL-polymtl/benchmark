@@ -303,7 +303,7 @@ void srand(uint32_t seed)
  * RETURN : None.
  * __________________________________________________________________________
  */
-void reverse(T_char *str, int32_t len)
+void reverse(char_t *str, int32_t len)
 {
   int32_t i=0, j=len-1, temp;
   while (i<j)
@@ -325,7 +325,7 @@ void reverse(T_char *str, int32_t len)
  * RETURN : None.
  * __________________________________________________________________________
  */
-int32_t intToStr(int32_t x, T_char str[], int32_t d)
+int32_t intToStr(int32_t x, char_t str[], int32_t d)
 {
   int32_t i = 0;
   while (x)
@@ -360,7 +360,7 @@ int32_t intToStr(int32_t x, T_char str[], int32_t d)
   #define LN10    2.30258509299404568402
   #define SQRT1_2   0.707106781186547524
 
-  const T_float32 kHuge = 1.701411733192644270e38;
+  const float32_t kHuge = 1.701411733192644270e38;
 
 #define isdigit(c) (c >= '0' && c <= '9')
 
@@ -374,10 +374,10 @@ int32_t intToStr(int32_t x, T_char str[], int32_t d)
  * RETURN : None.
  * __________________________________________________________________________
  */
-void ftoa(T_float32 n, T_char *res, int32_t afterpoint)
+void ftoa(float32_t n, char_t *res, int32_t afterpoint)
 {
   int32_t ipart = (int32_t)n;
-  T_float32 fpart = n - (T_float32)ipart;
+  float32_t fpart = n - (float32_t)ipart;
   // convert integer part to string
   int32_t i = intToStr(ipart, res, 0);
 
@@ -389,7 +389,7 @@ void ftoa(T_float32 n, T_char *res, int32_t afterpoint)
     // Get the value of fraction part upto given no.
     // of points after dot. The third parameter is needed
     // to handle cases like 233.007
-    fpart = fpart * pow((T_float32)10, (T_float32)afterpoint);
+    fpart = fpart * pow((float32_t)10, (float32_t)afterpoint);
 
     intToStr((int32_t)fpart, res + i + 1, afterpoint);
   }
@@ -405,9 +405,9 @@ void ftoa(T_float32 n, T_char *res, int32_t afterpoint)
  * RETURN : None.
  * __________________________________________________________________________
  */
-T_float32 atof(const T_char *s)
+float32_t atof(const char_t *s)
 {
-  T_float32 a = 0.0;
+  float32_t a = 0.0;
   int32_t e = 0;
   int32_t c;
   while ((c = *s++) != '\0' && isdigit(c))
@@ -473,10 +473,10 @@ T_float32 atof(const T_char *s)
  * RETURN : None.
  * __________________________________________________________________________
  */
-T_float32 modf(T_float32 val, T_float32 *iptr)
+float32_t modf(float32_t val, float32_t *iptr)
 {
   union{
-      T_float32 v;
+      float32_t v;
       struct{
 #ifdef LITTLE_ENDIAN
       uint32_t u_mant : 23;
@@ -533,9 +533,9 @@ T_float32 modf(T_float32 val, T_float32 *iptr)
  * __________________________________________________________________________
  */
 /*
-T_float32 fabs(T_float32 n)
+float32_t fabs(float32_t n)
 {
-  T_float32 f;
+  float32_t f;
 
   if (n >= 0.0) f = n;
   else f = -n;
@@ -553,10 +553,10 @@ T_float32 fabs(T_float32 n)
  * RETURN : None.
  * __________________________________________________________________________
  */
-T_float32 ldexp(T_float32 val, int32_t expon){
+float32_t ldexp(float32_t val, int32_t expon){
   int32_t oldexp, newexp;
   union {
-    T_float32 v;
+    float32_t v;
     struct {
 #ifdef LITTLE_ENDIAN
     uint32_t u_mant : 23;
@@ -686,9 +686,9 @@ T_float32 ldexp(T_float32 val, int32_t expon){
  * RETURN : None.
  * __________________________________________________________________________
  */
-T_float32 floor(T_float32 d)
+float32_t floor(float32_t d)
 {
-  T_float32 fract;
+  float32_t fract;
 
   if (d<0.0f)
   {
@@ -717,9 +717,9 @@ T_float32 floor(T_float32 d)
  * RETURN : None.
  * __________________________________________________________________________
  */
-T_float32 frexp(T_float32 value, int32_t *eptr){
+float32_t frexp(float32_t value, int32_t *eptr){
   union{
-    T_float32 v;
+    float32_t v;
     struct{
 #ifdef LITTLE_ENDIAN
       uint32_t u_mant : 23;
@@ -762,17 +762,17 @@ T_float32 frexp(T_float32 value, int32_t *eptr){
  * RETURN : None.
  * __________________________________________________________________________
  */
-T_float32 exp(T_float32 arg)
+float32_t exp(float32_t arg)
 {
-  static T_float32 p0 = 0.2080384346694663001443843411e7;
-  static T_float32 p1 = 0.3028697169744036299076048876e5;
-  static T_float32 p2 = 0.6061485330061080841615584556e2;
-  static T_float32 q0 = 0.6002720360238832528230907598e7;
-  static T_float32 q1 = 0.3277251518082914423057964422e6;
-  static T_float32 q2 = 0.1749287689093076403844945335e4;
+  static float32_t p0 = 0.2080384346694663001443843411e7;
+  static float32_t p1 = 0.3028697169744036299076048876e5;
+  static float32_t p2 = 0.6061485330061080841615584556e2;
+  static float32_t q0 = 0.6002720360238832528230907598e7;
+  static float32_t q1 = 0.3277251518082914423057964422e6;
+  static float32_t q2 = 0.1749287689093076403844945335e4;
 
-  T_float32 fract;
-  T_float32 temp1, temp2, xsq;
+  float32_t fract;
+  float32_t temp1, temp2, xsq;
   int32_t ent;
   if(arg == 0.0)
   {
@@ -809,22 +809,22 @@ T_float32 exp(T_float32 arg)
  * RETURN : None.
  * __________________________________________________________________________
  */
-T_float32 sinus(T_float32 arg, int32_t quad)
+float32_t sinus(float32_t arg, int32_t quad)
 {
-  static T_float32 p0 =  0.1357884097877375669092680e8;
-  static T_float32 p1 = -0.4942908100902844161158627e7;
-  static T_float32 p2 =  0.4401030535375266501944918e6;
-  static T_float32 p3 = -0.1384727249982452873054457e5;
-  static T_float32 p4 =  0.1459688406665768722226959e3;
-  static T_float32 q0 =  0.8644558652922534429915149e7;
-  static T_float32 q1 =  0.4081792252343299749395779e6;
-  static T_float32 q2 =  0.9463096101538208180571257e4;
-  static T_float32 q3 =  0.1326534908786136358911494e3;
-  T_float32 e, f;
-  T_float32 ysq;
-  T_float32 x,y;
+  static float32_t p0 =  0.1357884097877375669092680e8;
+  static float32_t p1 = -0.4942908100902844161158627e7;
+  static float32_t p2 =  0.4401030535375266501944918e6;
+  static float32_t p3 = -0.1384727249982452873054457e5;
+  static float32_t p4 =  0.1459688406665768722226959e3;
+  static float32_t q0 =  0.8644558652922534429915149e7;
+  static float32_t q1 =  0.4081792252343299749395779e6;
+  static float32_t q2 =  0.9463096101538208180571257e4;
+  static float32_t q3 =  0.1326534908786136358911494e3;
+  float32_t e, f;
+  float32_t ysq;
+  float32_t x,y;
   int32_t k;
-  T_float32 temp1, temp2;
+  float32_t temp1, temp2;
 
   x = arg;
   if(x<0)
@@ -875,7 +875,7 @@ T_float32 sinus(T_float32 arg, int32_t quad)
  * RETURN : None.
  * __________________________________________________________________________
  */
-T_float32 cos(T_float32 arg)
+float32_t cos(float32_t arg)
 {
   if(arg<0)
   {
@@ -895,7 +895,7 @@ T_float32 cos(T_float32 arg)
  * RETURN : None.
  * __________________________________________________________________________
  */
-T_float32 sin(T_float32 arg)
+float32_t sin(float32_t arg)
 {
   return(sinus(arg, 0));
 }
@@ -910,8 +910,8 @@ T_float32 sin(T_float32 arg)
  * RETURN : None.
  * __________________________________________________________________________
  */
-T_float32 sqrt(T_float32 arg){
-  T_float32 x, temp;
+float32_t sqrt(float32_t arg){
+  float32_t x, temp;
   int32_t exp;
   int32_t i;
 
@@ -974,17 +974,17 @@ T_float32 sqrt(T_float32 arg){
  * RETURN : None.
  * __________________________________________________________________________
  */
-T_float32 log(T_float32 arg)
+float32_t log(float32_t arg)
 {
-  static T_float32 p0 = -0.240139179559210510e2;
-  static T_float32 p1 =  0.309572928215376501e2;
-  static T_float32 p2 = -0.963769093368686593e1;
-  static T_float32 p3 =  0.421087371217979714e0;
-  static T_float32 q0 = -0.120069589779605255e2;
-  static T_float32 q1 =  0.194809660700889731e2;
-  static T_float32 q2 = -0.891110902798312337e1;
+  static float32_t p0 = -0.240139179559210510e2;
+  static float32_t p1 =  0.309572928215376501e2;
+  static float32_t p2 = -0.963769093368686593e1;
+  static float32_t p3 =  0.421087371217979714e0;
+  static float32_t q0 = -0.120069589779605255e2;
+  static float32_t q1 =  0.194809660700889731e2;
+  static float32_t q2 = -0.891110902798312337e1;
 
-  T_float32 x,z, zsq, temp;
+  float32_t x,z, zsq, temp;
   int32_t exp;
 
   if(arg <= 0.0)
@@ -1023,7 +1023,7 @@ T_float32 log(T_float32 arg)
  * RETURN : None.
  * __________________________________________________________________________
  */
-T_float32 log10(T_float32 arg)
+float32_t log10(float32_t arg)
 {
   return(log(arg)/LN10);
 }
@@ -1038,9 +1038,9 @@ T_float32 log10(T_float32 arg)
  * RETURN : None.
  * __________________________________________________________________________
  */
-T_float32 pow(T_float32 arg1, T_float32 arg2)
+float32_t pow(float32_t arg1, float32_t arg2)
 {
-  T_float32 temp;
+  float32_t temp;
   int32_t l;
 
   if(arg1 <= 0.0)
