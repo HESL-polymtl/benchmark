@@ -43,7 +43,7 @@
   #define portRTI_CNT0_UC1_REG    ( * ( ( volatile uint32_t * ) 0xFFFFFC34 ) )
   #define portRTI_CNT0_CPUC1_REG  ( * ( ( volatile uint32_t * ) 0xFFFFFC38 ) )
 
-#elif defined(_MPC5777C)
+#elif defined(_MPC5777C) || defined(_P2020RDB_PC)
 /* __________________________________________________________________________
  *
  * FUNCTION NAME : PerfInlineGetTicks
@@ -54,22 +54,22 @@
  * RETURN : None.
  * __________________________________________________________________________
  */
-uint64_t PerfInlineGetTicks()
+__attribute__((noinline)) uint64_t PerfInlineGetTicks()
 {
 
   uint32_t high = 0, low = 0;
   uint64_t ticks = 0;
 
-  __asm__ (".equ  TBL_USR, 268 \n\t"
+  __asm__ __volatile__ (".equ  TBL_USR, 268 \n\t"
            ".equ  TBU_USR, 269 \n\t"
            "stwu    1, -16(1) \n\t"
            "stw     5,  8(1)  \n\t"
-           "tryAgain:           \n\t"
+           "tryAgain1:           \n\t"
            "mfspr   %0, TBU_USR \n\t"
            "mfspr   %1, TBL_USR \n\t"
            "mfspr   5, TBU_USR \n\t"
            "cmpw    5, %0      \n\t"
-           "bne tryAgain        \n\t"
+           "bne tryAgain1        \n\t"
            "lwz     5, 8(1)   \n\t"
            "addi    1, 1, 16"
            : "=r" (high), "=r" (low));
@@ -101,7 +101,7 @@ uint64_t PerfGetTimeTicks(void)
   tick = RTI_UP_CNT ;
   tick |= (uint64_t) ((uint64_t) RTI_CNT_FRCx<<32u);
 
-#elif defined(_MPC5777C)
+#elif defined(_MPC5777C) || defined(_P2020RDB_PC)
   tick = PerfInlineGetTicks();
 #endif
 
@@ -139,12 +139,12 @@ void init_tick_counter()
  * RETURN : None.
  * __________________________________________________________________________
  */
-uint32_t perf_tick_to_ns(uint64_t ticks)
+uint64_t perf_tick_to_ns(uint64_t ticks)
 {
   uint32_t nClkFreq = CLOCK_FREQ;
   nClkFreq          = nClkFreq/COMMON_DIVISOR;
 
-  return ((uint32_t)__div64((uint64_t)(ticks * (1000000000/COMMON_DIVISOR)), (uint64_t)nClkFreq));
+  return ((uint64_t)((uint64_t)(ticks * (1000000000/COMMON_DIVISOR))/(uint64_t)nClkFreq));
 }
 
 /* __________________________________________________________________________
@@ -157,9 +157,24 @@ uint32_t perf_tick_to_ns(uint64_t ticks)
  * RETURN : None.
  * __________________________________________________________________________
  */
-uint32_t perf_tick_to_us(uint64_t ticks)
+uint64_t perf_tick_to_us(uint64_t ticks)
 {
   return (perf_tick_to_ns(ticks) / 1000);
+}
+
+/* __________________________________________________________________________
+ *
+ * FUNCTION NAME : perf_tick_to_ms
+ * DESCRIPTION   : TODO
+ *
+ * PARAMETERS : -in/out TODO
+ *              -in/out TODO
+ * RETURN : None.
+ * __________________________________________________________________________
+ */
+uint64_t perf_tick_to_ms(uint64_t ticks)
+{
+  return (perf_tick_to_ns(ticks) / 1000000);
 }
 
 /* __________________________________________________________________________
@@ -172,9 +187,9 @@ uint32_t perf_tick_to_us(uint64_t ticks)
  * RETURN : None.
  * __________________________________________________________________________
  */
-uint32_t perf_get_time_in_us()
+uint64_t perf_get_time_in_us()
 {
-  return ((uint32_t)__div64(perf_get_time_in_ns(),1000));
+  return (perf_get_time_in_ns()/1000);
 }
 
 /* __________________________________________________________________________
@@ -187,9 +202,9 @@ uint32_t perf_get_time_in_us()
  * RETURN : None.
  * __________________________________________________________________________
  */
-uint32_t perf_get_time_in_ms()
+uint64_t perf_get_time_in_ms()
 {
-  return ((uint32_t)__div64(perf_get_time_in_ns(),1000000));
+  return (perf_get_time_in_ns()/1000000);
 }
 
 /* __________________________________________________________________________
@@ -202,7 +217,7 @@ uint32_t perf_get_time_in_ms()
  * RETURN : None.
  * __________________________________________________________________________
  */
-uint32_t perf_get_time_in_ns()
+uint64_t perf_get_time_in_ns()
 {
   return perf_tick_to_ns(GET_CURRENT_TICKS());
 }
@@ -221,7 +236,7 @@ uint64_t perf_ns_to_ticks(uint64_t ns)
 {
   uint32_t nClkFreq = CLOCK_FREQ;
   nClkFreq          = nClkFreq/COMMON_DIVISOR;
-  return ((uint64_t)__div64((uint64_t)(ns * nClkFreq), (uint64_t)(1000000000/COMMON_DIVISOR)));
+  return (uint64_t)(ns * nClkFreq)/(uint64_t)(1000000000/COMMON_DIVISOR);
 }
 
 /* __________________________________________________________________________

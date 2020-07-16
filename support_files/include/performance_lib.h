@@ -113,24 +113,25 @@ typedef struct{
     uint64_t worst;
     uint64_t average;
     float32_t deviation;
-    float32_t averageNS;
-    float32_t averageUS;
-    float32_t worstUS;
-    float32_t bestUS;
-    float32_t timeNS;
-    float32_t timeUS;
-    float32_t timeMS;
+    uint64_t averageNS;
+    uint64_t averageUS;
+    uint64_t worstNS;
+    uint64_t bestNS;
+    uint64_t timeNS;
+    uint64_t timeUS;
+    uint64_t timeMS;
     uint64_t  sumTicks;
-    float32_t sumNSSQ;
+    float32_t sumNSSQ;    
     uint32_t  noSamples;
 }perf_struct;
 
 /*TIME*/
-uint32_t perf_get_time_in_ns();
-uint32_t perf_get_time_in_us();
-uint32_t perf_get_time_in_ms();
-uint32_t perf_tick_to_ns(uint64_t ticks);
-uint32_t perf_tick_to_us(uint64_t ticks);
+uint64_t perf_get_time_in_ns();
+uint64_t perf_get_time_in_us();
+uint64_t perf_get_time_in_ms();
+uint64_t perf_tick_to_ns(uint64_t ticks);
+uint64_t perf_tick_to_us(uint64_t ticks);
+uint64_t perf_tick_to_ms(uint64_t ticks);
 uint64_t perf_ns_to_ticks(uint64_t ns);
 
 void PrintString(const int8_t* string);
@@ -199,10 +200,10 @@ void print_perf();
 #define NO_PART_MAX_GAP 100000000
 #define DO_WORKLOAD(i) \
   do { \
-    uint64_t x = 9; \
-    uint64_t a = 0L; \
-    uint64_t r = 0L; \
-    uint64_t e = 0L; \
+    unsigned long x = 9; \
+    unsigned long a = 0L; \
+    unsigned long r = 0L; \
+    unsigned long e = 0L; \
     int _workload_i_; \
     for (_workload_i_ = 0; _workload_i_ < BITSPERLONG; _workload_i_++) \
     { \
@@ -232,9 +233,14 @@ void print_perf();
   TYPE max_cycles = PERF_INIT_MIN_TIME_VALUE; \
   TYPE min_cycles = PERF_INIT_MAX_TIME_VALUE; \
   TYPE average_cycles = PERF_INIT_MIN_TIME_VALUE; \
-  float32_t __LAST_PERF_STD = 0.0; \
-  float32_t __CURR_PERF_STD = 0.0; \
+  uint64_t __AVERAGE_NS = 0; \
+  uint64_t __TIME_NS = 0; \
+  uint64_t __LAST_PERF_STD = 0; \
+  uint64_t __CURR_PERF_STD = 0; \
+  uint64_t __VARIANCE = 0; \
   float32_t __STD_DEV = 0.0; \
+  uint64_t __SUM_TIME_NS_SQ = 0; \
+  uint32_t __NO_SAMPLES = 0;
 
 #define WRITE_T1_COUNTER(SUFFIX) \
   SUFFIX##_t1 = GET_CURRENT_TICKS();
@@ -245,6 +251,7 @@ void print_perf();
 #define COMPUTE_TIME_STATS(SUFFIX, n) do { \
     cycles = perf_time_diff(&SUFFIX##_t1, &SUFFIX##_t2); \
     if (cycles < NO_PART_MAX_GAP) { \
+      __NO_SAMPLES++; \
       if (cycles > max_cycles) \
       { \
         max_cycles = cycles; \
@@ -253,36 +260,49 @@ void print_perf();
       { \
         min_cycles = cycles; \
       } \
-      average_cycles = (average_cycles == 0) ? cycles : (__div64(cycles+average_cycles, 2)); \
-      __CURR_PERF_STD = perf_tick_to_ns(cycles) / 1000.0; \
-      if (__LAST_PERF_STD != 0.0){ \
-        __STD_DEV = (__CURR_PERF_STD + __LAST_PERF_STD)/2; \
-        __STD_DEV = (((__CURR_PERF_STD-__STD_DEV)*(__CURR_PERF_STD-__STD_DEV)) + ((__LAST_PERF_STD-__STD_DEV)*(__LAST_PERF_STD-__STD_DEV))) / 2; \
-        __STD_DEV = sqrt(__STD_DEV); \
-      }\
+      __TIME_NS = perf_tick_to_ns(cycles); \
+      average_cycles = ((__NO_SAMPLES - 1) * average_cycles + cycles) / __NO_SAMPLES; \
+      __AVERAGE_NS = ((__NO_SAMPLES - 1) * __AVERAGE_NS + __TIME_NS) / __NO_SAMPLES; \
+      __SUM_TIME_NS_SQ += __TIME_NS * __TIME_NS; \
+      __VARIANCE = (__SUM_TIME_NS_SQ / __NO_SAMPLES) - (__AVERAGE_NS * __AVERAGE_NS); \
       __LAST_PERF_STD = __CURR_PERF_STD; \
     }\
   } while(0);
 
 #define RESET_TIME_STATS() \
   average_cycles = 0; \
+  __AVERAGE_NS = 0; \
   max_cycles = 0; \
-  min_cycles = PERF_INIT_MAX_TIME_VALUE;
+  min_cycles = PERF_INIT_MAX_TIME_VALUE; \
+  __SUM_TIME_NS_SQ = 0; \
+  __NO_SAMPLES = 0;
 
 
 #define REPORT_RESULTS(max_cycles, min_cycles, average_cycles) \
   PERF_PRINT_EOL(); \
-  PERF_PRINT_STRING("Max time(us): "); \
-  PERF_PRINT_UNSIGNED(perf_tick_to_us(max_cycles)); \
+  PERF_PRINT_STRING("Max time(tick): "); \
+  PERF_PRINT_UNSIGNED64(max_cycles); \
   PERF_PRINT_EOL(); \
-  PERF_PRINT_STRING("Min time(us): "); \
-  PERF_PRINT_UNSIGNED(perf_tick_to_us(min_cycles)); \
+  PERF_PRINT_STRING("Min time(tick): "); \
+  PERF_PRINT_UNSIGNED64(min_cycles); \
   PERF_PRINT_EOL(); \
-  PERF_PRINT_STRING("Average time(us): "); \
-  PERF_PRINT_UNSIGNED(perf_tick_to_us(average_cycles)); \
+  PERF_PRINT_STRING("Average time(tick): "); \
+  PERF_PRINT_UNSIGNED64(average_cycles); \
+  PERF_PRINT_EOL(); \
+  PERF_PRINT_STRING("Max time(ns): "); \
+  PERF_PRINT_UNSIGNED64(perf_tick_to_ns(max_cycles) ); \
+  PERF_PRINT_EOL(); \
+  PERF_PRINT_STRING("Min time(ns): "); \
+  PERF_PRINT_UNSIGNED64(perf_tick_to_ns(min_cycles) ); \
+  PERF_PRINT_EOL(); \
+  PERF_PRINT_STRING("Average time(ns): "); \
+  PERF_PRINT_UNSIGNED64(__AVERAGE_NS ); \
   PERF_PRINT_EOL(); \
   PERF_PRINT_STRING("Standard Deviation: "); \
-  PERF_PRINT_FLOAT(__STD_DEV); \
+  PERF_PRINT_FLOAT((float32_t)__STD_DEV); \
+  PERF_PRINT_EOL(); \
+  PERF_PRINT_STRING("Number of samples: "); \
+  PERF_PRINT_UNSIGNED(__NO_SAMPLES); \
   PERF_PRINT_EOL(); \
   (void)__LAST_PERF_STD;\
   (void)__CURR_PERF_STD;\

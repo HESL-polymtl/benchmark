@@ -68,7 +68,7 @@ perf_task_handle_t perf_create_task(perf_task_entry_t task_entry,
   processAttributes.ENTRY_POINT = (SYSTEM_ADDRESS_TYPE)task_entry;
   strncpy(processAttributes.NAME, task_name, MAX_NAME_LENGTH);
   processAttributes.PERIOD = INFINITE_TIME_VALUE;
-  processAttributes.STACK_SIZE = 1024;
+  processAttributes.STACK_SIZE = 4096;
   processAttributes.TIME_CAPACITY = INFINITE_TIME_VALUE;
   CREATE_PROCESS(&processAttributes, &thandle, &errCode);
 

@@ -103,14 +103,15 @@ int32_t perf_init(char_t name[])
     EXECUTION_TIMES[pos].currentTime = 0;
     EXECUTION_TIMES[pos].deltaTime = 0;
     EXECUTION_TIMES[pos].sPrevTime = 0;
-    EXECUTION_TIMES[pos].worstUS = 0.0;
+    EXECUTION_TIMES[pos].worstNS = 0;
+    EXECUTION_TIMES[pos].bestNS = 0xFFFFFFFFFFFFFFFF;/;
+
     EXECUTION_TIMES[pos].worst = 0;
     EXECUTION_TIMES[pos].best = 0xFFFFFFFFFFFFFFFF;
-
     EXECUTION_TIMES[pos].average = 0;
     EXECUTION_TIMES[pos].averageNS = 0;
     EXECUTION_TIMES[pos].sumTicks = 0;
-    EXECUTION_TIMES[pos].sumNSSQ = 0;
+    EXECUTION_TIMES[pos].sumNSSQ = 0.0f;    
     EXECUTION_TIMES[pos].noSamples = 0;
     perf_pos = pos;
     return (pos);
@@ -161,50 +162,56 @@ void perf_end_measurements(int32_t pos)
  * PARAMETERS : -in/out TODO
  *              -in/out TODO
  * RETURN : None.
+ *
+ * STATUS: Due to a refactoring in the execution calculation, std deviation
+ *  is disabled for the moment.
+*
+ * TODO: Fix std.dev calculation
  * __________________________________________________________________________
  */
 void perf_validate_measurements(int32_t pos, uint8_t calc_deviation)
 {
-  float32_t variance = 0;
-
   EXECUTION_TIMES[pos].noSamples++;
   EXECUTION_TIMES[pos].deltaTime = (EXECUTION_TIMES[pos].currentTime - EXECUTION_TIMES[pos].sPrevTime);
 
-  EXECUTION_TIMES[pos].timeNS = (float32_t)perf_tick_to_ns(EXECUTION_TIMES[pos].deltaTime);
-  EXECUTION_TIMES[pos].timeUS = (float32_t)(EXECUTION_TIMES[pos].timeNS / 1000.0);
-  EXECUTION_TIMES[pos].timeMS = (float32_t)(EXECUTION_TIMES[pos].timeNS / 1000000.0);
+  EXECUTION_TIMES[pos].timeNS = perf_tick_to_ns(EXECUTION_TIMES[pos].deltaTime);
+  EXECUTION_TIMES[pos].timeUS = perf_tick_to_us(EXECUTION_TIMES[pos].deltaTime);
+  EXECUTION_TIMES[pos].timeMS = perf_tick_to_ms(EXECUTION_TIMES[pos].deltaTime);
 
-  EXECUTION_TIMES[pos].average = ((EXECUTION_TIMES[pos].noSamples - 1) * EXECUTION_TIMES[pos].average + EXECUTION_TIMES[pos].deltaTime) / EXECUTION_TIMES[pos].noSamples;
-  EXECUTION_TIMES[pos].averageNS = (float32_t)((float32_t)((float32_t)(EXECUTION_TIMES[pos].noSamples - 1) * (float32_t)EXECUTION_TIMES[pos].averageNS + (float32_t)EXECUTION_TIMES[pos].timeNS) / (float32_t)EXECUTION_TIMES[pos].noSamples);
-  EXECUTION_TIMES[pos].averageUS = (float32_t)(EXECUTION_TIMES[pos].averageNS / 1000.0);
+  EXECUTION_TIMES[pos].sumTicks += EXECUTION_TIMES[pos].deltaTime;
+  EXECUTION_TIMES[pos].average = EXECUTION_TIMES[pos].sumTicks / EXECUTION_TIMES[pos].noSamples;
+  EXECUTION_TIMES[pos].averageNS = perf_tick_to_ns(EXECUTION_TIMES[pos].average);
+  EXECUTION_TIMES[pos].averageUS = perf_tick_to_us(EXECUTION_TIMES[pos].average);
 
   if (EXECUTION_TIMES[pos].deltaTime < EXECUTION_TIMES[pos].best)
     {
-    EXECUTION_TIMES[pos].best = EXECUTION_TIMES[pos].deltaTime;
-    EXECUTION_TIMES[pos].bestUS = EXECUTION_TIMES[pos].timeUS;
+      EXECUTION_TIMES[pos].best = EXECUTION_TIMES[pos].deltaTime;
+      EXECUTION_TIMES[pos].bestNS = EXECUTION_TIMES[pos].timeNS;
     }
 
   if (EXECUTION_TIMES[pos].deltaTime > EXECUTION_TIMES[pos].worst)
     {
-    EXECUTION_TIMES[pos].worst = EXECUTION_TIMES[pos].deltaTime;
-    EXECUTION_TIMES[pos].worstUS = EXECUTION_TIMES[pos].timeUS;
+      EXECUTION_TIMES[pos].worst = EXECUTION_TIMES[pos].deltaTime;
+      EXECUTION_TIMES[pos].worstNS = EXECUTION_TIMES[pos].timeNS;
     }
 
-  if (calc_deviation == 1)
-    {
+ if (calc_deviation == 1)
+    {       
+      /*
       EXECUTION_TIMES[pos].sumNSSQ += EXECUTION_TIMES[pos].timeNS * EXECUTION_TIMES[pos].timeNS;
       variance = (float32_t)((float32_t)((float32_t)EXECUTION_TIMES[pos].sumNSSQ / (float32_t)EXECUTION_TIMES[pos].noSamples) - (float32_t)(EXECUTION_TIMES[pos].averageNS * EXECUTION_TIMES[pos].averageNS));
       if (variance < 0)
         {
-          /* Rough estimation of standard deviation*/
+          // Rough estimation of standard deviation
           EXECUTION_TIMES[pos].deviation = (float32_t)((EXECUTION_TIMES[pos].worstUS - EXECUTION_TIMES[pos].bestUS) / 4.0);
         }
       else
         {
           EXECUTION_TIMES[pos].deviation = (float32_t)(sqrt(variance) / 1000.0);
-        }
+        }*/
     }
 }
+
 
 /* __________________________________________________________________________
  *
@@ -245,30 +252,33 @@ void print_perf()
     PERF_PRINT_STRING(current.name);
     PERF_PRINT_STRING("*!*");
     PERF_PRINT_EOL();
+
     PERF_PRINT_STRING("Last Execution Time (tick): ");
     PERF_PRINT_UNSIGNED64(current.deltaTime);
-    PERF_PRINT_EOL();
-    PERF_PRINT_STRING("BCET (tick): ");
-    PERF_PRINT_UNSIGNED64(current.best);
-    PERF_PRINT_EOL();
-    PERF_PRINT_STRING("WCET (tick): ");
-    PERF_PRINT_UNSIGNED64(current.worst);
     PERF_PRINT_EOL();
     PERF_PRINT_STRING("Average (tick): ");
     PERF_PRINT_UNSIGNED64(current.average);
     PERF_PRINT_EOL();
-    PERF_PRINT_STRING("Last Execution Time (us): ");
-    PERF_PRINT_FLOAT(current.timeUS);
+    PERF_PRINT_STRING("WCET (tick): ");
+    PERF_PRINT_UNSIGNED64(current.worst);
     PERF_PRINT_EOL();
-    PERF_PRINT_STRING("BCET (us): ");
-    PERF_PRINT_FLOAT(current.bestUS);
+    PERF_PRINT_STRING("BCET (tick): ");
+    PERF_PRINT_UNSIGNED64(current.best);
     PERF_PRINT_EOL();
-    PERF_PRINT_STRING("Average (us): ");
-    PERF_PRINT_FLOAT(current.averageUS);
+
+    PERF_PRINT_STRING("Last Execution Time (ns): ");
+    PERF_PRINT_UNSIGNED64(current.timeNS);
     PERF_PRINT_EOL();
-    PERF_PRINT_STRING("WCET (us): ");
-    PERF_PRINT_FLOAT(current.worstUS);
+    PERF_PRINT_STRING("Average (ns): ");
+    PERF_PRINT_UNSIGNED64(current.averageNS);
     PERF_PRINT_EOL();
+    PERF_PRINT_STRING("WCET (ns): ");
+    PERF_PRINT_UNSIGNED64(current.worstNS);
+    PERF_PRINT_EOL();
+    PERF_PRINT_STRING("BCET (ns): ");
+    PERF_PRINT_UNSIGNED64(current.bestNS);
+    PERF_PRINT_EOL();
+
     PERF_PRINT_STRING("Standard Deviation (us): ");
     PERF_PRINT_FLOAT(current.deviation);
     PERF_PRINT_EOL();
