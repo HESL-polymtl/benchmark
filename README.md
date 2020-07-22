@@ -5,7 +5,7 @@ SFPBench seeks to provide a standard set of applications for ARINC-653 based sys
 
 The SFPBench is composed of several test applications, each one of them designed to assess a given set of metrics. These applications are either an extension of open-source frameworks (i.e., RTOSBench and SNU-RT) or are new test applications. SFPBench is organized as support_files, which contains the abstractions layers for porting it to different targets, as well as test_applications, which holds the applications.
 
-#Reference paper
+# Reference paper
   https://arxiv.org/abs/2007.10794
 
 # references
